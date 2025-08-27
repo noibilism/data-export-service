@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Service Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .metric-card {
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        .status-badge {
+            font-size: 0.8rem;
+        }
+        .refresh-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        .table-responsive {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .status-pending { color: #ffc107; }
+        .status-processing { color: #17a2b8; }
+        .status-completed { color: #28a745; }
+        .status-failed { color: #dc3545; }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-line me-2"></i>
+                Export Service Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-clock me-1"></i>
+                    Last Updated: <span id="lastUpdated">--</span>
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- System Health Alert -->
+        <div id="systemAlert" class="alert alert-dismissible d-none" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span id="alertMessage"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Metrics Overview -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0 text-muted">Total Exports</h6>
+                            <i class="fas fa-file-export text-primary fa-lg"></i>
+                        </div>
+                        <h2 class="text-primary mb-0" id="totalExports">--</h2>
+                        <small class="text-muted">All time</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0 text-muted">Active Jobs</h6>
+                            <i class="fas fa-cogs text-info fa-lg"></i>
+                        </div>
+                        <h2 class="text-info mb-0" id="activeJobs">--</h2>
+                        <small class="text-muted">Currently processing</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0 text-muted">Success Rate</h6>
+                            <i class="fas fa-check-circle text-success fa-lg"></i>
+                        </div>
+                        <h2 class="text-success mb-0" id="successRate">--%</h2>
+                        <small class="text-muted">Last 24 hours</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0 text-muted">Avg Processing Time</h6>
+                            <i class="fas fa-stopwatch text-warning fa-lg"></i>
+                        </div>
+                        <h2 class="text-warning mb-0" id="avgProcessingTime">--</h2>
+                        <small class="text-muted">Minutes</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-area me-2 text-primary"></i>
+                            Export Activity (Last 7 Days)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="activityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-pie me-2 text-primary"></i>
+                            Export Status Distribution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list me-2 text-primary"></i>
+                            Recent Exports
+                        </h5>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <input type="radio" class="btn-check" name="statusFilter" id="all" value="all" checked>
+                            <label class="btn btn-outline-primary" for="all">All</label>
+                            <input type="radio" class="btn-check" name="statusFilter" id="pending" value="pending">
+                            <label class="btn btn-outline-warning" for="pending">Pending</label>
+                            <input type="radio" class="btn-check" name="statusFilter" id="processing" value="processing">
+                            <label class="btn btn-outline-info" for="processing">Processing</label>
+                            <input type="radio" class="btn-check" name="statusFilter" id="completed" value="completed">
+                            <label class="btn btn-outline-success" for="completed">Completed</label>
+                            <input type="radio" class="btn-check" name="statusFilter" id="failed" value="failed">
+                            <label class="btn btn-outline-danger" for="failed">Failed</label>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Reference ID</th>
+                                        <th>Table</th>
+                                        <th>Date Range</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="exportsTable">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>
+                                            Loading exports...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-server me-2 text-primary"></i>
+                            System Health
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-muted">Database Connection</span>
+                                <span id="dbStatus" class="badge bg-secondary">Checking...</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-muted">Redis Connection</span>
+                                <span id="redisStatus" class="badge bg-secondary">Checking...</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-muted">S3 Connection</span>
+                                <span id="s3Status" class="badge bg-secondary">Checking...</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-muted">Celery Workers</span>
+                                <span id="celeryStatus" class="badge bg-secondary">Checking...</span>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Queue Size</span>
+                                <span id="queueSize" class="fw-bold">--</span>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Failed Tasks</span>
+                                <span id="failedTasks" class="fw-bold text-danger">--</span>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted">Worker Uptime</span>
+                                <span id="workerUptime" class="fw-bold">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Refresh Button -->
+    <button class="btn btn-primary btn-lg rounded-circle refresh-btn" onclick="refreshData()" title="Refresh Data">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let activityChart, statusChart;
+        let refreshInterval;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            refreshData();
+            startAutoRefresh();
+            setupEventListeners();
+        });
+
+        function initializeCharts() {
+            // Activity Chart
+            const activityCtx = document.getElementById('activityChart').getContext('2d');
+            activityChart = new Chart(activityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Exports Created',
+                        data: [],
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Status Chart
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'Processing', 'Pending', 'Failed'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#dc3545'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupEventListeners() {
+            // Status filter buttons
+            document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    filterExports(this.value);
+                });
+            });
+        }
+
+        function refreshData() {
+            const refreshBtn = document.querySelector('.refresh-btn i');
+            refreshBtn.classList.add('fa-spin');
+
+            Promise.all([
+                fetchMetrics(),
+                fetchExports(),
+                fetchSystemHealth(),
+                fetchChartData()
+            ]).finally(() => {
+                refreshBtn.classList.remove('fa-spin');
+                updateLastUpdated();
+            });
+        }
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/dashboard/metrics');
+                const data = await response.json();
+                
+                document.getElementById('totalExports').textContent = data.total_exports || '--';
+                document.getElementById('activeJobs').textContent = data.active_jobs || '--';
+                document.getElementById('successRate').textContent = (data.success_rate || 0) + '%';
+                document.getElementById('avgProcessingTime').textContent = data.avg_processing_time || '--';
+            } catch (error) {
+                console.error('Error fetching metrics:', error);
+                showAlert('Failed to fetch metrics', 'danger');
+            }
+        }
+
+        async function fetchExports() {
+            try {
+                const response = await fetch('/dashboard/exports');
+                const data = await response.json();
+                
+                updateExportsTable(data.exports || []);
+            } catch (error) {
+                console.error('Error fetching exports:', error);
+                showAlert('Failed to fetch exports', 'danger');
+            }
+        }
+
+        async function fetchSystemHealth() {
+            try {
+                const response = await fetch('/dashboard/health');
+                const data = await response.json();
+                
+                updateHealthStatus('dbStatus', data.database);
+                updateHealthStatus('redisStatus', data.redis);
+                updateHealthStatus('s3Status', data.s3);
+                updateHealthStatus('celeryStatus', data.celery);
+                
+                document.getElementById('queueSize').textContent = data.queue_size || '--';
+                document.getElementById('failedTasks').textContent = data.failed_tasks || '--';
+                document.getElementById('workerUptime').textContent = data.worker_uptime || '--';
+            } catch (error) {
+                console.error('Error fetching system health:', error);
+                showAlert('Failed to fetch system health', 'danger');
+            }
+        }
+
+        async function fetchChartData() {
+            try {
+                const response = await fetch('/dashboard/charts');
+                const data = await response.json();
+                
+                // Update activity chart
+                if (data.activity) {
+                    activityChart.data.labels = data.activity.labels;
+                    activityChart.data.datasets[0].data = data.activity.data;
+                    activityChart.update();
+                }
+                
+                // Update status chart
+                if (data.status_distribution) {
+                    statusChart.data.datasets[0].data = [
+                        data.status_distribution.completed || 0,
+                        data.status_distribution.processing || 0,
+                        data.status_distribution.pending || 0,
+                        data.status_distribution.failed || 0
+                    ];
+                    statusChart.update();
+                }
+            } catch (error) {
+                console.error('Error fetching chart data:', error);
+            }
+        }
+
+        function updateExportsTable(exports) {
+            const tbody = document.getElementById('exportsTable');
+            
+            if (exports.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox me-2"></i>
+                            No exports found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = exports.map(exp => `
+                <tr data-status="${exp.status}">
+                    <td>
+                        <code class="text-primary">${exp.reference_id}</code>
+                    </td>
+                    <td>${exp.table_name}</td>
+                    <td>
+                        <small>${exp.start_date} to ${exp.end_date}</small>
+                    </td>
+                    <td>
+                        <span class="badge status-badge ${getStatusClass(exp.status)}">
+                            ${getStatusIcon(exp.status)} ${exp.status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td>
+                        <small class="text-muted">${formatDate(exp.created_at)}</small>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary btn-sm" onclick="viewExport('${exp.reference_id}')" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${exp.status === 'completed' ? `
+                                <button class="btn btn-outline-success btn-sm" onclick="downloadExport('${exp.reference_id}')" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateHealthStatus(elementId, status) {
+            const element = document.getElementById(elementId);
+            const isHealthy = status === 'healthy' || status === true;
+            
+            element.className = `badge ${isHealthy ? 'bg-success' : 'bg-danger'}`;
+            element.innerHTML = `
+                <i class="fas ${isHealthy ? 'fa-check' : 'fa-times'} me-1"></i>
+                ${isHealthy ? 'Healthy' : 'Error'}
+            `;
+        }
+
+        function getStatusClass(status) {
+            const classes = {
+                'pending': 'bg-warning',
+                'processing': 'bg-info',
+                'completed': 'bg-success',
+                'failed': 'bg-danger'
+            };
+            return classes[status] || 'bg-secondary';
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                'pending': '<i class="fas fa-clock"></i>',
+                'processing': '<i class="fas fa-cog fa-spin"></i>',
+                'completed': '<i class="fas fa-check"></i>',
+                'failed': '<i class="fas fa-times"></i>'
+            };
+            return icons[status] || '<i class="fas fa-question"></i>';
+        }
+
+        function filterExports(status) {
+            const rows = document.querySelectorAll('#exportsTable tr[data-status]');
+            rows.forEach(row => {
+                if (status === 'all' || row.dataset.status === status) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+
+        function updateLastUpdated() {
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        }
+
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('systemAlert');
+            const alertMessage = document.getElementById('alertMessage');
+            
+            alert.className = `alert alert-${type} alert-dismissible`;
+            alertMessage.textContent = message;
+            alert.classList.remove('d-none');
+            
+            setTimeout(() => {
+                alert.classList.add('d-none');
+            }, 5000);
+        }
+
+        function startAutoRefresh() {
+            refreshInterval = setInterval(refreshData, 30000); // Refresh every 30 seconds
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        function viewExport(referenceId) {
+            window.open(`/export/${referenceId}`, '_blank');
+        }
+
+        function downloadExport(referenceId) {
+            fetch(`/export/${referenceId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.download_url) {
+                        window.open(data.download_url, '_blank');
+                    } else {
+                        showAlert('Download URL not available', 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting download URL:', error);
+                    showAlert('Failed to get download URL', 'danger');
+                });
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopAutoRefresh);
+    </script>
+</body>
+</html>

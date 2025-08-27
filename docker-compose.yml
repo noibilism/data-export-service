@@ -1,0 +1,170 @@
+version: '3.8'
+
+services:
+  # MySQL database for export service
+  export_db:
+    image: mysql:8.0
+    container_name: statement_export_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: export_service
+      MYSQL_USER: export_user
+      MYSQL_PASSWORD: export_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - export_db_data:/var/lib/mysql
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - statement_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # MySQL database for transactions (simulated)
+  transactions_db:
+    image: mysql:8.0
+    container_name: statement_transactions_db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: transactions
+      MYSQL_USER: readonly_user
+      MYSQL_PASSWORD: readonly_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - transactions_db_data:/var/lib/mysql
+      - ./init-transactions-db:/docker-entrypoint-initdb.d
+    networks:
+      - statement_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis for Celery broker
+  redis:
+    image: redis:7-alpine
+    container_name: statement_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - statement_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 10s
+      retries: 5
+
+  # Flask API service
+  api:
+    build: .
+    container_name: statement_api
+    environment:
+      - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
+      - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET_KEY=jwt-secret-key-change-in-production
+      - AWS_ACCESS_KEY_ID=your-aws-access-key
+      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+      - AWS_REGION=us-east-1
+      - S3_BUCKET=statement-exports
+      - FLASK_ENV=development
+      - LOG_LEVEL=INFO
+    ports:
+      - "5000:5000"
+    depends_on:
+      export_db:
+        condition: service_healthy
+      transactions_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - statement_network
+    volumes:
+      - ./logs:/app/logs
+    command: >
+      sh -c "python migrations/create_exports_table.py &&
+             gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 --reload 'app:create_app()'"
+
+  # Celery worker
+  worker:
+    build: .
+    container_name: statement_worker
+    environment:
+      - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
+      - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET_KEY=jwt-secret-key-change-in-production
+      - AWS_ACCESS_KEY_ID=your-aws-access-key
+      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+      - AWS_REGION=us-east-1
+      - S3_BUCKET=statement-exports
+      - LOG_LEVEL=INFO
+    depends_on:
+      export_db:
+        condition: service_healthy
+      transactions_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - statement_network
+    volumes:
+      - ./logs:/app/logs
+    command: celery -A workers.celery_app worker --loglevel=info --concurrency=2
+
+  # Celery beat scheduler (for periodic tasks)
+  scheduler:
+    build: .
+    container_name: statement_scheduler
+    environment:
+      - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
+      - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET_KEY=jwt-secret-key-change-in-production
+      - AWS_ACCESS_KEY_ID=your-aws-access-key
+      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+      - AWS_REGION=us-east-1
+      - S3_BUCKET=statement-exports
+      - LOG_LEVEL=INFO
+    depends_on:
+      export_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - statement_network
+    volumes:
+      - ./logs:/app/logs
+    command: celery -A workers.celery_app beat --loglevel=info
+
+  # Flower for Celery monitoring
+  flower:
+    build: .
+    container_name: statement_flower
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    networks:
+      - statement_network
+    command: celery -A workers.celery_app flower --port=5555
+
+volumes:
+  export_db_data:
+  transactions_db_data:
+
+networks:
+  statement_network:
+    driver: bridge
