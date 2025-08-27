@@ -1,17 +1,35 @@
 # Bank Statement Export Service
 
-A production-ready Python service for exporting bank statement data with intelligent deduplication, background processing, and S3 storage.
+A production-ready Python service for exporting bank statement data with intelligent deduplication, background processing, S3 storage, and comprehensive dashboard management.
 
-## How It Works
+## 🚀 Quick Start
 
-### Architecture Overview
+### Testing with SQLite (Recommended for Development)
 
-The Bank Statement Export Service is built with a microservices architecture that handles large-scale data exports efficiently:
+```bash
+# 1. Install dependencies
+pip3 install flask sqlalchemy prometheus-flask-exporter
+
+# 2. Initialize test database
+python3 test_init_db.py
+
+# 3. Start the test server
+python3 test_app.py
+
+# 4. Access the dashboard
+open http://localhost:5001/dashboard
+```
+
+**Test API Key**: `sk_dbGYC7Gw-CfDa3n1ritzO7sdzNwqJ-0o8iwuJMlhNTI`
+
+## 🏗️ Architecture Overview
+
+The service is built with a microservices architecture optimized for large-scale data exports:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Client App    │───▶│   Flask API     │───▶│  Celery Worker  │
-│                 │    │  (JWT Auth)     │    │ (Background)    │
+│                 │    │ (API Key Auth)  │    │ (Background)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │                        │
                                 ▼                        ▼
@@ -19,34 +37,37 @@ The Bank Statement Export Service is built with a microservices architecture tha
                        │  Export MySQL   │    │ Transactions DB │
                        │   (Metadata)    │    │  (Read-only)    │
                        └─────────────────┘    └─────────────────┘
-                                                        │
-                                                        ▼
-                                              ┌─────────────────┐
-                                              │   Amazon S3     │
-                                              │ (CSV Storage)   │
-                                              └─────────────────┘
+                                │                        │
+                                ▼                        ▼
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │   Dashboard     │    │   Amazon S3     │
+                       │ (Monitoring)    │    │ (CSV Storage)   │
+                       └─────────────────┘    └─────────────────┘
 ```
 
-### Core Components
+## ✨ Key Features
 
-1. **Flask API Server**: Handles REST endpoints with JWT authentication
-2. **Celery Workers**: Process background export jobs with retry logic
-3. **Redis**: Message broker for Celery task queue
-4. **MySQL Databases**: 
-   - Export metadata (reference IDs, status, deduplication)
-   - Transactions data (existing bank data with `created_at` field)
-5. **Amazon S3**: Secure file storage with pre-signed URLs
-6. **Flower**: Celery monitoring dashboard
+### 🔐 **Security & Authentication**
+- **API Key Authentication**: Secure, manageable API keys with SHA-256 hashing
+- **Admin Dashboard**: Web interface for API key management
+- **Access Control**: Fine-grained permissions and key lifecycle management
 
-### Key Features
+### 📊 **Monitoring & Management**
+- **Real-time Dashboard**: Bootstrap-powered web interface
+- **Export Analytics**: Job statistics, success rates, and performance metrics
+- **System Health**: Database connectivity, queue status, and resource monitoring
+- **Prometheus Integration**: Comprehensive metrics collection
 
-- **Intelligent Deduplication**: Prevents redundant exports using SHA256 hashing
+### 🚀 **Performance & Scalability**
+- **Intelligent Deduplication**: SHA256-based duplicate prevention
 - **Streaming Queries**: Memory-efficient processing of 10M+ row datasets
 - **Background Processing**: Non-blocking API with Celery workers
-- **S3 Integration**: Multipart uploads and secure pre-signed URLs
-- **JWT Authentication**: Secure API access
-- **Comprehensive Monitoring**: Prometheus metrics and Flower dashboard
 - **Retry Logic**: Automatic retry with exponential backoff
+
+### 💾 **Data Management**
+- **S3 Integration**: Multipart uploads and secure pre-signed URLs
+- **Multiple Database Support**: MySQL for production, SQLite for testing
+- **Data Integrity**: Transaction-safe operations with rollback support
 
 ### Export Flow
 
@@ -90,9 +111,8 @@ The Bank Statement Export Service is built with a microservices architecture tha
    AWS_REGION=us-east-1
    S3_BUCKET=your-statement-exports-bucket
    
-   # JWT Security
+   # Security
    SECRET_KEY=your_super_secret_flask_key
-   JWT_SECRET_KEY=your_jwt_signing_secret
    
    # Database (if using external)
    TRANSACTIONS_DATABASE_URL=mysql+pymysql://user:pass@host:port/transactions
@@ -414,24 +434,25 @@ The Bank Statement Export Service is built with a microservices architecture tha
    aws iam create-access-key --user-name statement-service-user
    ```
 
-## API Usage
+## 📡 API Usage
 
-### Authentication
+### 🔐 Authentication
 
-Generate JWT token (implement your own auth endpoint or use the provided utility):
+The API uses secure API key authentication. You can manage API keys through the dashboard:
 
-```python
-from middleware.auth import generate_token
-token = generate_token(user_id="your-user-id")
-```
+1. **Access Dashboard**: `http://your-server:5001/dashboard`
+2. **Navigate to API Keys**: Click "API Key Management" section
+3. **Create New Key**: Click "Create API Key" and provide a name
+4. **Copy Key**: Save the generated key securely (shown only once)
 
-### Create Export Job
+### 📤 Create Export Job
 
 ```bash
 curl -X POST http://your-server:5000/api/export \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
+    "account_id": "123456",
     "table_name": "bank_transactions",
     "date_from": "2024-01-01",
     "date_to": "2024-01-31",
@@ -444,15 +465,16 @@ curl -X POST http://your-server:5000/api/export \
 {
   "reference_id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "PENDING",
-  "reused": false
+  "reused": false,
+  "message": "Export job queued successfully"
 }
 ```
 
-### Check Export Status
+### 📊 Check Export Status
 
 ```bash
 curl -X GET http://your-server:5000/api/export/550e8400-e29b-41d4-a716-446655440000 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+  -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
 **Response (Completed)**:
@@ -471,7 +493,45 @@ curl -X GET http://your-server:5000/api/export/550e8400-e29b-41d4-a716-446655440
 }
 ```
 
-## Monitoring and Maintenance
+## 📊 Dashboard & Management
+
+### 🖥️ Web Dashboard
+
+Access the comprehensive dashboard at `http://your-server:5001/dashboard`
+
+**Features:**
+- **Export Analytics**: Real-time job statistics and success rates
+- **System Health**: Database connectivity and queue status monitoring
+- **Performance Metrics**: Response times, throughput, and resource usage
+- **Interactive Charts**: Visual representation of export trends
+
+### 🔑 API Key Management
+
+Manage API keys through the admin interface at `http://your-server:5001/admin/api-keys`
+
+**Capabilities:**
+- **Create Keys**: Generate new API keys with custom names and descriptions
+- **Monitor Usage**: Track last used timestamps and activity
+- **Lifecycle Management**: Activate, deactivate, and delete keys
+- **Security**: SHA-256 hashed storage with prefix display
+
+**API Key Features:**
+- Secure generation with `sk_` prefix
+- Usage tracking and analytics
+- Granular access control
+- One-time display for security
+
+### 📈 Real-time Monitoring
+
+**Dashboard Sections:**
+1. **Export Statistics**: Success rates, average processing time
+2. **Recent Exports**: Latest job status and details
+3. **System Health**: Database, queue, and service status
+4. **API Key Management**: Create and manage authentication keys
+
+**Auto-refresh**: Dashboard updates every 30 seconds for real-time monitoring
+
+## 🔧 Monitoring and Maintenance
 
 ### Health Checks
 
