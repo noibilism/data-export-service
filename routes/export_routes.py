@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, date
 import hashlib
 from models import db, Export, ExportStatus
-from middleware.auth import jwt_required
+from middleware.api_key_auth import api_key_required, get_current_api_key_info
 from services.export_service import ExportService
 from services.s3_service import S3Service
 from workers.export_worker import export_task
@@ -12,8 +12,8 @@ export_bp = Blueprint('export', __name__)
 logger = logging.getLogger(__name__)
 
 @export_bp.route('/export', methods=['POST'])
-@jwt_required
-def create_export(current_user_id):
+@api_key_required
+def create_export():
     """Create a new export job or return existing one based on deduplication logic"""
     try:
         data = request.get_json()
@@ -44,7 +44,11 @@ def create_export(current_user_id):
         dedup_string = f"{table_name}|{date_from_str}|{date_to_str}"
         dedup_key = hashlib.sha256(dedup_string.encode()).hexdigest()
         
-        logger.info(f"Export request - User: {current_user_id}, Table: {table_name}, "
+        # Get API key info for tracking
+        api_key_info = get_current_api_key_info()
+        user_id = api_key_info['name'] if api_key_info else 'unknown'
+        
+        logger.info(f"Export request - User: {user_id}, Table: {table_name}, "
                    f"Date range: {date_from} to {date_to}, Dedup key: {dedup_key}, "
                    f"Force refresh: {force_refresh}")
         
@@ -90,7 +94,8 @@ def create_export(current_user_id):
             date_from=date_from,
             date_to=date_to,
             dedup_key=dedup_key,
-            status=ExportStatus.PENDING
+            status=ExportStatus.PENDING,
+            user_id=user_id
         )
         
         db.session.add(new_export)
@@ -113,8 +118,8 @@ def create_export(current_user_id):
         return jsonify({'error': 'Internal server error'}), 500
 
 @export_bp.route('/export/<reference_id>', methods=['GET'])
-@jwt_required
-def get_export_status(current_user_id, reference_id):
+@api_key_required
+def get_export_status(reference_id):
     """Get the status of an export job"""
     try:
         export = Export.query.filter_by(reference_id=reference_id).first()

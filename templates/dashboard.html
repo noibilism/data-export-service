@@ -258,6 +258,126 @@
                 </div>
             </div>
         </div>
+
+        <!-- API Key Management Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-key me-2 text-primary"></i>
+                            API Key Management
+                        </h5>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createApiKeyModal">
+                            <i class="fas fa-plus me-1"></i>
+                            Create API Key
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Key Prefix</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Last Used</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="apiKeysTable">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>
+                                            Loading API keys...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create API Key Modal -->
+    <div class="modal fade" id="createApiKeyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2"></i>
+                        Create New API Key
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createApiKeyForm">
+                        <div class="mb-3">
+                            <label for="apiKeyName" class="form-label">Name *</label>
+                            <input type="text" class="form-control" id="apiKeyName" required
+                                   placeholder="e.g., Production API, Development Key">
+                            <div class="form-text">Choose a descriptive name for this API key</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="apiKeyDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="apiKeyDescription" rows="3"
+                                      placeholder="Optional description of what this key is used for"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createApiKey()">
+                        <i class="fas fa-plus me-1"></i>
+                        Create API Key
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Display Modal -->
+    <div class="modal fade" id="apiKeyDisplayModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2 text-success"></i>
+                        API Key Created Successfully
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Important:</strong> This is the only time you'll see the full API key. Please copy it now.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Key</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="newApiKeyValue" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyApiKey()">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Usage Example</label>
+                        <pre class="bg-light p-3 rounded"><code>curl -H "Authorization: Bearer YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"account_id":"123","table_name":"transactions","date_from":"2024-01-01","date_to":"2024-01-31"}' \
+     http://localhost:5000/api/export</code></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I've Copied the Key</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Floating Refresh Button -->
@@ -274,9 +394,10 @@
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
             initializeCharts();
-            refreshData();
-            startAutoRefresh();
             setupEventListeners();
+            refreshData();
+            loadApiKeys();
+            startAutoRefresh();
         });
 
         function initializeCharts() {
@@ -574,6 +695,168 @@
                     console.error('Error getting download URL:', error);
                     showAlert('Failed to get download URL', 'danger');
                 });
+        }
+
+        // API Key Management Functions
+        async function loadApiKeys() {
+            try {
+                const response = await fetch('/admin/api-keys');
+                const data = await response.json();
+                
+                const tbody = document.getElementById('apiKeysTable');
+                
+                if (data.api_keys && data.api_keys.length > 0) {
+                    tbody.innerHTML = data.api_keys.map(key => `
+                        <tr>
+                            <td>
+                                <strong>${escapeHtml(key.name)}</strong>
+                                ${key.description ? `<br><small class="text-muted">${escapeHtml(key.description)}</small>` : ''}
+                            </td>
+                            <td><code>${escapeHtml(key.key_prefix)}***</code></td>
+                            <td>${escapeHtml(key.description || 'No description')}</td>
+                            <td>
+                                <span class="badge ${key.is_active ? 'bg-success' : 'bg-secondary'}">
+                                    ${key.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td>${new Date(key.created_at).toLocaleDateString()}</td>
+                            <td>${key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    ${key.is_active ? 
+                                        `<button class="btn btn-outline-warning" onclick="toggleApiKey('${key.id}', false)" title="Deactivate">
+                                            <i class="fas fa-pause"></i>
+                                        </button>` :
+                                        `<button class="btn btn-outline-success" onclick="toggleApiKey('${key.id}', true)" title="Activate">
+                                            <i class="fas fa-play"></i>
+                                        </button>`
+                                    }
+                                    <button class="btn btn-outline-danger" onclick="deleteApiKey('${key.id}')" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-key me-2"></i>
+                                No API keys found. Create your first API key to get started.
+                            </td>
+                        </tr>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading API keys:', error);
+                showAlert('Failed to load API keys', 'danger');
+            }
+        }
+
+        async function createApiKey() {
+            const name = document.getElementById('apiKeyName').value.trim();
+            const description = document.getElementById('apiKeyDescription').value.trim();
+            
+            if (!name) {
+                showAlert('API key name is required', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/api-keys', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, description })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Close create modal
+                    const createModal = bootstrap.Modal.getInstance(document.getElementById('createApiKeyModal'));
+                    createModal.hide();
+                    
+                    // Show the new API key
+                    document.getElementById('newApiKeyValue').value = data.api_key.key;
+                    const displayModal = new bootstrap.Modal(document.getElementById('apiKeyDisplayModal'));
+                    displayModal.show();
+                    
+                    // Clear form
+                    document.getElementById('createApiKeyForm').reset();
+                    
+                    // Reload API keys table
+                    loadApiKeys();
+                    
+                    showAlert('API key created successfully', 'success');
+                } else {
+                    showAlert(data.error || 'Failed to create API key', 'danger');
+                }
+            } catch (error) {
+                console.error('Error creating API key:', error);
+                showAlert('Failed to create API key', 'danger');
+            }
+        }
+
+        async function toggleApiKey(keyId, activate) {
+            try {
+                const endpoint = activate ? `/admin/api-keys/${keyId}/activate` : `/admin/api-keys/${keyId}/deactivate`;
+                const response = await fetch(endpoint, { method: 'POST' });
+                
+                if (response.ok) {
+                    loadApiKeys();
+                    showAlert(`API key ${activate ? 'activated' : 'deactivated'} successfully`, 'success');
+                } else {
+                    const data = await response.json();
+                    showAlert(data.error || 'Failed to update API key', 'danger');
+                }
+            } catch (error) {
+                console.error('Error toggling API key:', error);
+                showAlert('Failed to update API key', 'danger');
+            }
+        }
+
+        async function deleteApiKey(keyId) {
+            if (!confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/api-keys/${keyId}`, { method: 'DELETE' });
+                
+                if (response.ok) {
+                    loadApiKeys();
+                    showAlert('API key deleted successfully', 'success');
+                } else {
+                    const data = await response.json();
+                    showAlert(data.error || 'Failed to delete API key', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deleting API key:', error);
+                showAlert('Failed to delete API key', 'danger');
+            }
+        }
+
+        function copyApiKey() {
+            const apiKeyInput = document.getElementById('newApiKeyValue');
+            apiKeyInput.select();
+            apiKeyInput.setSelectionRange(0, 99999); // For mobile devices
+            
+            try {
+                document.execCommand('copy');
+                showAlert('API key copied to clipboard', 'success');
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                showAlert('Failed to copy API key. Please copy manually.', 'warning');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // Cleanup on page unload

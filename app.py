@@ -3,6 +3,7 @@ from config.config import Config
 from models import db
 from routes.export_routes import export_bp
 from routes.dashboard_routes import dashboard_bp
+from routes.admin_routes import admin_bp
 from middleware.auth import jwt_required
 from prometheus_flask_exporter import PrometheusMetrics
 import logging
@@ -22,6 +23,7 @@ def create_app():
     # Register blueprints
     app.register_blueprint(export_bp, url_prefix='/api')
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(admin_bp, url_prefix='/admin')
     
     # Setup logging
     if not app.debug:

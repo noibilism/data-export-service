@@ -1,5 +1,4 @@
 from flask import Blueprint, render_template, jsonify, request
-from middleware.auth import require_auth
 from services.dashboard_service import DashboardService
 import logging
 
@@ -9,7 +8,6 @@ dashboard_bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 dashboard_service = DashboardService()
 
 @dashboard_bp.route('/', methods=['GET'])
-@require_auth
 def dashboard_view():
     """Render the dashboard HTML page"""
     try:
@@ -22,7 +20,6 @@ def dashboard_view():
         }), 500
 
 @dashboard_bp.route('/metrics', methods=['GET'])
-@require_auth
 def get_metrics():
     """Get dashboard metrics"""
     try:
@@ -36,7 +33,6 @@ def get_metrics():
         }), 500
 
 @dashboard_bp.route('/exports', methods=['GET'])
-@require_auth
 def get_exports():
     """Get recent exports for dashboard table"""
     try:
@@ -55,7 +51,6 @@ def get_exports():
         }), 500
 
 @dashboard_bp.route('/health', methods=['GET'])
-@require_auth
 def get_system_health():
     """Get system health status"""
     try:
@@ -69,7 +64,6 @@ def get_system_health():
         }), 500
 
 @dashboard_bp.route('/charts', methods=['GET'])
-@require_auth
 def get_chart_data():
     """Get data for dashboard charts"""
     try:
@@ -83,7 +77,6 @@ def get_chart_data():
         }), 500
 
 @dashboard_bp.route('/export/<reference_id>', methods=['GET'])
-@require_auth
 def get_export_details(reference_id):
     """Get detailed information about a specific export"""
     try:
@@ -104,7 +97,6 @@ def get_export_details(reference_id):
         }), 500
 
 @dashboard_bp.route('/stats', methods=['GET'])
-@require_auth
 def get_dashboard_stats():
     """Get comprehensive dashboard statistics"""
     try:
@@ -127,7 +119,6 @@ def get_dashboard_stats():
         }), 500
 
 @dashboard_bp.route('/search', methods=['GET'])
-@require_auth
 def search_exports():
     """Search exports by various criteria"""
     try:
@@ -161,7 +152,6 @@ def search_exports():
         }), 500
 
 @dashboard_bp.route('/actions/retry/<reference_id>', methods=['POST'])
-@require_auth
 def retry_export(reference_id):
     """Retry a failed export"""
     try:
@@ -185,7 +175,6 @@ def retry_export(reference_id):
         }), 500
 
 @dashboard_bp.route('/actions/cancel/<reference_id>', methods=['POST'])
-@require_auth
 def cancel_export(reference_id):
     """Cancel a pending or processing export"""
     try:
@@ -208,7 +197,6 @@ def cancel_export(reference_id):
         }), 500
 
 @dashboard_bp.route('/system/cleanup', methods=['POST'])
-@require_auth
 def trigger_cleanup():
     """Manually trigger cleanup of old exports"""
     try:
