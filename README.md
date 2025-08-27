@@ -493,6 +493,49 @@ curl -X GET http://your-server:5000/api/export/550e8400-e29b-41d4-a716-446655440
 }
 ```
 
+## 📮 Postman Collection
+
+### 🚀 Quick API Testing
+
+We provide a comprehensive Postman collection for easy API testing and integration:
+
+**📥 Download Collection**: [Statement_Service_API.postman_collection.json](./postman/Statement_Service_API.postman_collection.json)
+
+### 📋 Collection Features
+
+- **🔐 Authentication**: Pre-configured API key authentication
+- **📤 Export Endpoints**: Create and monitor export jobs
+- **🔑 API Key Management**: Create, list, and deactivate API keys
+- **📊 Dashboard APIs**: Access dashboard statistics and monitoring
+- **🏥 Health Checks**: System health and Prometheus metrics
+- **🧪 Test Scripts**: Automated response validation
+- **🔧 Environment Variables**: Easy configuration for different environments
+
+### 🛠️ Setup Instructions
+
+1. **Import Collection**:
+   - Open Postman
+   - Click "Import" → "Upload Files"
+   - Select `postman/Statement_Service_API.postman_collection.json`
+
+2. **Configure Variables**:
+   - `base_url`: Your API server URL (default: `http://localhost:5000`)
+   - `dashboard_url`: Your dashboard URL (default: `http://localhost:5001`)
+   - `api_key`: Your generated API key (replace `sk_your_api_key_here`)
+
+3. **Generate API Key**:
+   - Use "Create API Key" request in the Authentication folder
+   - Copy the returned key to the `api_key` variable
+   - Start testing the protected endpoints!
+
+### 📚 Collection Structure
+
+- **🔐 Authentication**: API key management endpoints
+- **📤 Export API**: Core export functionality with examples
+- **📊 Dashboard & Monitoring**: System health and analytics
+
+**💡 Pro Tip**: Use the collection's environment variables to easily switch between development, staging, and production environments.
+
 ## 📊 Dashboard & Management
 
 ### 🖥️ Web Dashboard

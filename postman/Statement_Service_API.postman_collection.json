@@ -1,0 +1,386 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Statement Service API",
+		"description": "Complete API collection for the Bank Statement Export Service with API key authentication, export management, and dashboard endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12345678"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Create API Key",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"My API Key\",\n    \"description\": \"API key for testing purposes\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/api-keys",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api-keys"
+							]
+						},
+						"description": "Create a new API key for authentication. Save the returned key securely as it's only shown once."
+					},
+					"response": []
+				},
+				{
+					"name": "List API Keys",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/api-keys",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api-keys"
+							]
+						},
+						"description": "Retrieve all API keys with their metadata (excluding the actual key values)."
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate API Key",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/api-keys/{{api_key_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"admin",
+								"api-keys",
+								"{{api_key_id}}"
+							]
+						},
+						"description": "Deactivate an API key by its ID."
+					},
+					"response": []
+				}
+			],
+			"description": "API key management endpoints for creating, listing, and deactivating authentication keys."
+		},
+		{
+			"name": "📤 Export API",
+			"item": [
+				{
+					"name": "Create Export Job",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{api_key}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"account_id\": \"123456\",\n    \"table_name\": \"bank_transactions\",\n    \"date_from\": \"2024-01-01\",\n    \"date_to\": \"2024-01-31\",\n    \"force_refresh\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/export",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"export"
+							]
+						},
+						"description": "Create a new export job. The service will check for existing exports with the same parameters and reuse them if available."
+					},
+					"response": [
+						{
+							"name": "Export Job Created",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"account_id\": \"123456\",\n    \"table_name\": \"bank_transactions\",\n    \"date_from\": \"2024-01-01\",\n    \"date_to\": \"2024-01-31\",\n    \"force_refresh\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/export",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"export"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"reference_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"PENDING\",\n    \"reused\": false,\n    \"message\": \"Export job queued successfully\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Export Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{api_key}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/export/{{reference_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"export",
+								"{{reference_id}}"
+							]
+						},
+						"description": "Check the status of an export job and get download URL when completed."
+					},
+					"response": [
+						{
+							"name": "Export Completed",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/export/550e8400-e29b-41d4-a716-446655440000",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"export",
+										"550e8400-e29b-41d4-a716-446655440000"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"reference_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"status\": \"COMPLETED\",\n    \"table_name\": \"bank_transactions\",\n    \"date_from\": \"2024-01-01\",\n    \"date_to\": \"2024-01-31\",\n    \"file_url\": \"https://presigned-s3-url.com/file.csv\",\n    \"file_size\": 2048576,\n    \"row_count\": 50000,\n    \"created_at\": \"2024-01-15T10:30:00Z\",\n    \"completed_at\": \"2024-01-15T10:35:00Z\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Core export functionality for creating and monitoring bank statement export jobs."
+		},
+		{
+			"name": "📊 Dashboard & Monitoring",
+			"item": [
+				{
+					"name": "Dashboard Home",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{dashboard_url}}/dashboard",
+							"host": [
+								"{{dashboard_url}}"
+							],
+							"path": [
+								"dashboard"
+							]
+						},
+						"description": "Access the main dashboard interface with export analytics and system health monitoring."
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard API - Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{dashboard_url}}/api/dashboard/stats",
+							"host": [
+								"{{dashboard_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"stats"
+							]
+						},
+						"description": "Get dashboard statistics including export counts, success rates, and performance metrics."
+					},
+					"response": []
+				},
+				{
+					"name": "Dashboard API - Recent Exports",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{dashboard_url}}/api/dashboard/recent-exports",
+							"host": [
+								"{{dashboard_url}}"
+							],
+							"path": [
+								"api",
+								"dashboard",
+								"recent-exports"
+							]
+						},
+						"description": "Get recent export jobs with their status and metadata."
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check the health status of the API service."
+					},
+					"response": []
+				},
+				{
+					"name": "Prometheus Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/metrics",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"metrics"
+							]
+						},
+						"description": "Get Prometheus metrics for monitoring and alerting."
+					},
+					"response": []
+				}
+			],
+			"description": "Dashboard and monitoring endpoints for system health and analytics."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Pre-request script for setting up common variables",
+					"// You can add any setup logic here"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Test script for common assertions",
+					"pm.test(\"Status code is successful\", function () {",
+					"    pm.expect(pm.response.code).to.be.oneOf([200, 201, 202]);",
+					"});",
+					"",
+					"pm.test(\"Response time is less than 5000ms\", function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string",
+			"description": "Base URL for the Statement Service API"
+		},
+		{
+			"key": "dashboard_url",
+			"value": "http://localhost:5001",
+			"type": "string",
+			"description": "Base URL for the Dashboard interface"
+		},
+		{
+			"key": "api_key",
+			"value": "sk_your_api_key_here",
+			"type": "string",
+			"description": "Your API key for authentication (replace with actual key)"
+		},
+		{
+			"key": "reference_id",
+			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string",
+			"description": "Example reference ID for export status checks"
+		},
+		{
+			"key": "api_key_id",
+			"value": "1",
+			"type": "string",
+			"description": "API key ID for management operations"
+		}
+	]
+}
