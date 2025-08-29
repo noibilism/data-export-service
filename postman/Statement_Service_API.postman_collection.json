@@ -297,9 +297,64 @@
 								"health"
 							]
 						},
-						"description": "Check the health status of the API service."
+						"description": "Check the comprehensive health status of the API service including all dependencies."
 					},
-					"response": []
+					"response": [
+						{
+							"name": "Healthy Service",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/health",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"health"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"status\": \"healthy\",\n    \"service\": \"statement-service\",\n    \"version\": \"1.0.0\",\n    \"components\": {\n        \"database\": \"healthy\",\n        \"redis\": \"healthy\",\n        \"s3\": \"healthy\",\n        \"celery\": \"healthy\",\n        \"queue_size\": 3,\n        \"failed_tasks\": 0,\n        \"worker_uptime\": \"2h 15m\"\n    },\n    \"timestamp\": \"2024-01-15T10:30:00Z\"\n}"
+						},
+						{
+							"name": "Unhealthy Service",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/health",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"health"
+									]
+								}
+							},
+							"status": "Service Unavailable",
+							"code": 503,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"status\": \"unhealthy\",\n    \"service\": \"statement-service\",\n    \"version\": \"1.0.0\",\n    \"components\": {\n        \"database\": \"healthy\",\n        \"redis\": \"error\",\n        \"s3\": \"healthy\",\n        \"celery\": \"error\",\n        \"queue_size\": 0,\n        \"failed_tasks\": 5,\n        \"worker_uptime\": \"0h 0m\"\n    },\n    \"timestamp\": \"2024-01-15T10:30:00Z\"\n}"
+						}
+					]
 				},
 				{
 					"name": "Prometheus Metrics",
