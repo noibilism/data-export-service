@@ -25,6 +25,15 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(admin_bp, url_prefix='/admin')
     
+    # Health endpoint
+    @app.route('/health')
+    def health():
+        return {
+            'status': 'healthy',
+            'service': 'statement-service',
+            'version': '1.0.0'
+        }, 200
+    
     # Setup logging
     if not app.debug:
         if not os.path.exists('logs'):
