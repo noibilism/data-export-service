@@ -8,6 +8,7 @@ from middleware.auth import jwt_required
 from prometheus_flask_exporter import PrometheusMetrics
 import logging
 from logging.handlers import RotatingFileHandler
+from datetime import datetime
 import os
 
 def create_app():
@@ -28,11 +29,37 @@ def create_app():
     # Health endpoint
     @app.route('/health')
     def health():
-        return {
-            'status': 'healthy',
-            'service': 'statement-service',
-            'version': '1.0.0'
-        }, 200
+        from services.dashboard_service import DashboardService
+        
+        try:
+            dashboard_service = DashboardService()
+            system_health = dashboard_service.get_system_health()
+            
+            # Determine overall status
+            all_healthy = all(
+                status == 'healthy' 
+                for key, status in system_health.items() 
+                if key in ['database', 'redis', 's3', 'celery']
+            )
+            
+            overall_status = 'healthy' if all_healthy else 'unhealthy'
+            
+            return {
+                'status': overall_status,
+                'service': 'statement-service',
+                'version': '1.0.0',
+                'components': system_health,
+                'timestamp': dashboard_service._get_current_timestamp()
+            }, 200 if all_healthy else 503
+            
+        except Exception as e:
+            return {
+                'status': 'unhealthy',
+                'service': 'statement-service',
+                'version': '1.0.0',
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            }, 503
     
     # Setup logging
     if not app.debug:
