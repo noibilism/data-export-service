@@ -37,6 +37,7 @@ def create_exports_table():
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         started_at TIMESTAMP NULL,
         completed_at TIMESTAMP NULL,
+        user_id VARCHAR(255) NOT NULL,
         
         INDEX idx_dedup_key_status (dedup_key, status),
         INDEX idx_table_date_range (table_name, date_from, date_to),

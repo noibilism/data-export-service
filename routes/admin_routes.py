@@ -19,7 +19,7 @@ def list_api_keys():
         })
     except Exception as e:
         logger.error(f"Error listing API keys: {str(e)}")
-        return jsonify({'error': 'Failed to list API keys'}), 500
+        return jsonify({'error': 'Failed to list API keys', 'details': str(e) }), 500
 
 @admin_bp.route('/api-keys', methods=['POST'])
 @admin_required
@@ -58,7 +58,7 @@ def create_api_key():
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error creating API key: {str(e)}")
-        return jsonify({'error': 'Failed to create API key'}), 500
+        return jsonify({'error': 'Failed to create API key', 'details': str(e) }), 500
 
 @admin_bp.route('/api-keys/<key_id>', methods=['PUT'])
 @admin_required

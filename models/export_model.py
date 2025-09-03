@@ -30,6 +30,7 @@ class Export(db.Model):
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     started_at = db.Column(db.DateTime, nullable=True)
     completed_at = db.Column(db.DateTime, nullable=True)
+    user_id = db.Column(db.String(255), nullable=False)
     
     # Indexes for performance
     __table_args__ = (
