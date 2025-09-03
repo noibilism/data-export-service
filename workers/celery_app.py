@@ -11,10 +11,9 @@ def make_celery(app):
     )
     
     # Update Celery config with Flask config
-    celery.conf.update(app.config)
-    
-    # Configure task serialization
     celery.conf.update(
+        result_backend=app.config['CELERY_RESULT_BACKEND'],
+        broker_url=app.config['CELERY_BROKER_URL'],
         task_serializer='json',
         accept_content=['json'],
         result_serializer='json',
@@ -27,7 +26,8 @@ def make_celery(app):
         task_acks_late=True,
         worker_disable_rate_limits=False,
         task_default_retry_delay=60,  # 1 minute
-        task_max_retries=3
+        task_max_retries=3,
+        s3_bucket=app.config['S3_BUCKET']
     )
     
     class ContextTask(celery.Task):
