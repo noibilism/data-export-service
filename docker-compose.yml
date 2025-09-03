@@ -60,21 +60,23 @@ services:
   api:
     build: .
     container_name: statement_api
-    environment:
-      - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
-      - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - JWT_SECRET_KEY=jwt-secret-key-change-in-production
-      - AWS_ACCESS_KEY_ID=your-aws-access-key
-      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
-      - AWS_REGION=us-east-1
-      - S3_BUCKET=statement-exports
-      - FLASK_ENV=development
-      - LOG_LEVEL=INFO
+    # environment:
+    #   - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
+    #   - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
+    #   - CELERY_BROKER_URL=redis://redis:6379/0
+    #   - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    #   - SECRET_KEY=dev-secret-key-change-in-production
+    #   - JWT_SECRET_KEY=jwt-secret-key-change-in-production
+    #   - AWS_ACCESS_KEY_ID=your-aws-access-key
+    #   - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+    #   - AWS_REGION=us-east-1
+    #   - S3_BUCKET=statement-exports
+    #   - FLASK_ENV=development
+    #   - LOG_LEVEL=INFO
+    env_file:
+      - .env
     ports:
-      - "5000:5000"
+      - "5001:5000"
     depends_on:
       export_db:
         condition: service_healthy
@@ -94,18 +96,20 @@ services:
   worker:
     build: .
     container_name: statement_worker
-    environment:
-      - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
-      - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - JWT_SECRET_KEY=jwt-secret-key-change-in-production
-      - AWS_ACCESS_KEY_ID=your-aws-access-key
-      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
-      - AWS_REGION=us-east-1
-      - S3_BUCKET=statement-exports
-      - LOG_LEVEL=INFO
+    # environment:
+    #   - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
+    #   - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
+    #   - CELERY_BROKER_URL=redis://redis:6379/0
+    #   - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    #   - SECRET_KEY=dev-secret-key-change-in-production
+    #   - JWT_SECRET_KEY=jwt-secret-key-change-in-production
+    #   - AWS_ACCESS_KEY_ID=your-aws-access-key
+    #   - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+    #   - AWS_REGION=us-east-1
+    #   - S3_BUCKET=statement-exports
+    #   - LOG_LEVEL=INFO
+    env_file:
+      - .env 
     depends_on:
       export_db:
         condition: service_healthy
@@ -123,18 +127,20 @@ services:
   scheduler:
     build: .
     container_name: statement_scheduler
-    environment:
-      - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
-      - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - JWT_SECRET_KEY=jwt-secret-key-change-in-production
-      - AWS_ACCESS_KEY_ID=your-aws-access-key
-      - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
-      - AWS_REGION=us-east-1
-      - S3_BUCKET=statement-exports
-      - LOG_LEVEL=INFO
+    # environment:
+    #   - DATABASE_URL=mysql+pymysql://export_user:export_password@export_db:3306/export_service
+    #   - TRANSACTIONS_DATABASE_URL=mysql+pymysql://readonly_user:readonly_password@transactions_db:3306/transactions
+    #   - CELERY_BROKER_URL=redis://redis:6379/0
+    #   - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    #   - SECRET_KEY=dev-secret-key-change-in-production
+    #   - JWT_SECRET_KEY=jwt-secret-key-change-in-production
+    #   - AWS_ACCESS_KEY_ID=your-aws-access-key
+    #   - AWS_SECRET_ACCESS_KEY=your-aws-secret-key
+    #   - AWS_REGION=us-east-1
+    #   - S3_BUCKET=statement-exports
+    #   - LOG_LEVEL=INFO
+    env_file:
+      - .env     
     depends_on:
       export_db:
         condition: service_healthy
